@@ -1,0 +1,188 @@
+---
+title: "Visualisation et Analyse des Donnees Cholesterol"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+# Visualisation du niveau cholesterol apres l'usage de deux marques de margarine
+
+
+Nous importons d'abord le fichier csv dans le dataframe "data" en choisissant le directory de fichier.
+
+```{r}
+data <- read.csv(file.choose())
+data
+```
+
+
+Nous constatons qu'un besoin de "tidy messy data" pour le dataset original "data", vu que les colonnes "Before","After4weeks","After8weeks" sont toutes des variables pour decricre le niveau du cholestérol, il faut les transformer en deux colonnes, une pour decrire la période d'usage de la margarine que nous nommons "times", et une autre pour decrire le niveau de cholestérol apres l'usage de la margarine que nous nommons "values". Nous obtenons le nouveau dataframe "long_data" avec des donnees propres.
+
+```{r}
+# data => long_data
+library(tidyr)
+long_data <- data %>%
+  tidyr::pivot_longer(
+    cols = c("Before","After4weeks","After8weeks"),
+    names_to = "times",
+    values_to = "values") 
+long_data
+```
+
+
+## Graphique : Niveau cholesterol pendant les differentes periodes d'usage de la margarine
+
+Pour la visualisation des données, nous allons definir l'order d'importance des trois variables de la periode : "Before","After4weeks","After8weeks" pour suivre l'ordre temporel. Cela sera utile pour notre observation des graphiques. 
+
+```{r}
+long_data$times <- factor(long_data$times,levels=c("Before","After4weeks","After8weeks"))
+```
+
+```{r}
+# set ID as factor
+long_data$ID <- as.factor(long_data$ID)
+```
+
+Dans cette étape nous dessinons le graphique "Niveau cholesterol apres l'usage de la margarine" avec la librarie ggplot2.
+
+```{r}
+library(ggplot2)
+p1 <- ggplot(long_data,aes(x=times,y=values,color=ID,group=ID))+
+  geom_line()+
+  geom_point()+
+  facet_wrap(~ `Margarine`)+
+  labs(title="Niveau cholesterol 
+       apres l'usage de la margarine",
+       y="Niveau cholesterol",x="Periode")+
+  theme(plot.title = element_text(hjust = 0.5,size=13))
+p1
+```
+
+Selon le graphique, nous pouvons constater que parmi les 18 personnes, le niveau cholesterol baisse plus vite pour ce qui ont pris la margarine B, c'est-a-dire, la margarine B a un effet plus important que la margarine A pour reduire le niveau cholesterol, c'est mieux pour la sante. 
+Cependant, nous ne pouvons pas voir plus precisement le niveau de reduction dans ce graphique. Nous allons dessiner trois graphiques qui vont decrire le taux de reduction du niveau cholesterol selon la periode d'usage de la margarine.C'est-a-dire, le taux de reduction pendant huit semaines , le taux de reduction pendant les premieres quatres semaines (semaines 1-4) et le taux de reduction pendant les deuxiemes quatres semaines (semaines 5-8). Cela va nous permettre d'avoir une vue plus claire sur la difference d'effet entre les deux marques de margarine. 
+
+
+## Graphique : Pourcentage de reduction du niveau cholesterol apres 8 semaines d'usage de la margarine avec l'ajustement de courbe pour chaque marque de margarine 
+
+Nous allons d'abord calculer le taux de reduction apres huit semaines d'usage de la margarine. Il faut un dataframe "data_taux_Af8s" avec les colonnes "ID", "Before", "After8weeks" et "Margarine".
+
+```{r}
+# data => data_taux_Af8s
+data_taux_Af8s <- data.frame(data[,c(1,2,4,5)])
+data_taux_Af8s
+```
+
+Nous allons ensuite calculer et creer la variable "tauxAf8s" qui correspond au taux de reduction (en %) du niveau cholesterol pendant huits semaines d'usage (arrondi). Voici la formule pour calculer : 
+(niveau cholesterol actuel - niveau debut)/niveau debut * 100 
+
+```{r}
+attach(data_taux_Af8s)
+data_taux_Af8s$tauxAf8s <- -round((After8weeks - Before)/Before,4)*100
+data_taux_Af8s
+```
+Nous allons prendre le sous dataset "data_taux_Af8s_2" avec les colonnes ID, Margarine et tauxAf8s pour dessiner le graphique.
+
+```{r}
+data_taux_Af8s_2 <-  data.frame(data_taux_Af8s[,c(1,4,5)])
+data_taux_Af8s_2
+```
+
+Nous allons utiliser la librarie ggplot2 pour dessiner. "geom_smooth" nous permet de decrire l'ajustement de courbe pour chaque marque de margarine pour voir un niveau general.
+
+```{r}
+p2 <- ggplot(data_taux_Af8s_2,aes(x=ID,y=tauxAf8s,group=Margarine,color=Margarine))+
+  geom_point()+
+  geom_smooth()+
+  labs(title = "Pourcentage de reduction du niveau cholesterol 
+  apres 8 semaines d'usage de margarine",y="Taux de reduction")+
+  theme(plot.title = element_text(hjust = 0.5,size=11))
+p2
+```
+
+Nous pouvons constater que les deux marques de margarine ont tous un bon effet concernant la reduction du niveau cholesterol (au moyen autour de 10%) apres huit semaines d'usage de margarine. La marque B est un peu plus efficace pour la plupart des individus. 
+
+Nous pouvons constater que pour la plupart des individus qui ont pris la margarine de la marque B, le taux de reduction est plus important que ceux qui ont pris la margarine A. Nous pouvons dire que la margarine B est plus efficace pour reduire le niveau cholosterol. 
+
+
+## Graphique : Pourcentage de reduction du niveau cholesterol pendant les premires quatres semaines d'usage de la margarine avec l'ajustement de courbe 
+
+De la meme maniere, nous allons ensuite prendre un sous dataset "data_taux_First4s" avec les colonnes "ID", "Before", "After4weeks" et "Margarine" pour calculer "tauxFisrt4s": le taux de reduction pendant les premieres quatres semaines. Nous allons aussi prendre un sous dateset "data_taux_First4s_2" avec les colonnes "ID", "Margarine" et "tauxFisrt4s" pour dessiner le graphique. 
+
+```{r}
+data_taux_First4s <- data.frame(data[,c(1,2,3,5)])
+data_taux_First4s
+```
+
+
+```{r}
+attach(data_taux_First4s)
+data_taux_First4s$tauxFisrt4s <- -round((After4weeks - Before)/Before,4)*100
+data_taux_First4s
+```
+
+```{r}
+data_taux_First4s_2 <-  data.frame(data_taux_First4s[,c(1,4,5)])
+data_taux_First4s_2
+```
+```{r}
+p3 <- ggplot(data_taux_First4s_2,aes(x=ID,y=tauxFisrt4s,group=Margarine,color=Margarine))+
+  geom_point()+
+  geom_smooth()+
+  labs(title = "Pourcentage de reduction du niveau cholesterol 
+       apres les premieres 4 semaines 
+       d'usage de margarine",y="Taux de reduction")+
+  theme(plot.title = element_text(hjust = 0.5,size = 11))
+p3
+```
+
+Nous pouvons constater que les deux marques de margarine ont tous un bon effet concernant la reduction du niveau cholesterol (au moyen autour de 10%) apres quatre semaines d'usage. La marque B est un peu plus efficace pour la plupart des individus pendant les premieres quatres semaines d'usage. 
+
+
+## Graphique : Pourcentage de reduction du niveau cholesterol apres les deuxiemes quatre semaines d'usage de la margarine avec l'ajustement de courbe 
+
+De la meme maniere, nous allons dessiner le graphique pour le taux de reduction du niveau cholesterol apres les deuxiemes quatres semaines d'usage de la margarine. 
+
+```{r}
+data_taux_Second4s <- data.frame(data[,c(1,3,4,5)])
+data_taux_Second4s
+```
+
+```{r}
+attach(data_taux_Second4s)
+data_taux_Second4s$tauxSecond4s <- -round((After8weeks - After4weeks)/After4weeks,4)*100
+data_taux_Second4s
+```
+
+```{r}
+data_taux_Second4s_2 <-  data.frame(data_taux_Second4s[,c(1,4,5)])
+data_taux_Second4s_2
+```
+```{r}
+p4 <- ggplot(data_taux_Second4s,aes(x=ID,y=tauxSecond4s,group=Margarine,color=Margarine))+
+  geom_point()+
+  geom_smooth()+
+  labs(title = "Pourcentage de reduction du niveau cholesterol 
+  apres les deuxiemes 4 semaines 
+  d'usage de margarine",y="Taux de reduction")+
+  theme(plot.title = element_text(hjust = 0.5,size = 11))
+p4
+```
+
+Nous pouvons constater que pendant les deuxiemes quatre semaines d'usage de la margarine, les deux marques de margarine ont un effet faible sur les niveaux cholesterol des individus. Les niveaux sont globalement stables et ils restent au meme niveau (au moyen 1%). Nous pouvons probablement dire que pour les deux marques, l'effet de la margarine sur le niveau cholesterol pendant les deuxiemes quatre semaines d'usage n'est pas autant important que celui pour les premires quatre semaines. 
+
+
+## Regroupement des graphiques pour une vue globale 
+
+```{r}
+library(gridExtra)
+# global : vue gloable de l'évolution du niveau cholesterol apres 8 semaines d'usage de la margarine
+global <- grid.arrange(p1,p2,ncol = 2)
+
+# period : vue temporelle de l'évolution du niveau cholesterol apres les premieres et les deuxiemes quatre semaines d'usage de la margarine
+period <- grid.arrange(p3,p4,ncol = 2)
+```
+
+
+# Conclusion 
+
+En conclusion, nous constatons les deux marques de margarine peuvent tous aider à réduire le niveau cholesterol, surtout pendant les premières quatre semaines d'usage. A partir de quatre semaines, l'effet de réduction diminue et le taux de réduction du niveau cholesterol reste à niveau faible et stable. Globalement, la marque B est plus efficace que la marque A pour réduire le niveau cholesterol. 
